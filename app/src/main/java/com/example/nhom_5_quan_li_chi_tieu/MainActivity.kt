@@ -9,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.nhom_5_quan_li_chi_tieu.data.BudgetDatabase
 import com.example.nhom_5_quan_li_chi_tieu.ui.screens.MainScreen
+import com.example.nhom_5_quan_li_chi_tieu.ui.screens.ThongKeScreen
+import com.example.nhom_5_quan_li_chi_tieu.ui.screens.GioiThieuScreen
 import com.example.nhom_5_quan_li_chi_tieu.ui.theme.Nhom5quanlichitieuTheme
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
 import androidx.compose.material3.*
@@ -16,12 +18,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.nhom_5_quan_li_chi_tieu.ui.screens.ThongKeScreen
+
 
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("BTL_Lifecycle", "0. onCreate: Khởi tạo ứng dụng")
 
         val xanhChuDao = Color(0xFF2E7D32)
         val xanhNhat = Color(0xFFE8F5E9)
@@ -54,12 +57,23 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(navController =navController, startDestination = "main"){
                         composable("main"){
-                            MainScreen(viewModel, onNavigateToThongKe =
-                                { navController.navigate("thongke") })
+                            MainScreen(
+                                viewModel = viewModel,
+                                onNavigateToThongKe = { navController.navigate("thongke") },
+                                onNavigateToAbout = { navController.navigate("about") }
+                            )
                         }
                         composable("thongke"){
-                            ThongKeScreen(onBackClick =
-                                {navController.popBackStack() } )
+                            ThongKeScreen(
+                                viewModel = viewModel,
+                                onBackClick = { navController.popBackStack() }
+                            )
+                        }
+                        composable("about"){
+                            GioiThieuScreen(
+                                onBackClick = { navController.popBackStack() },
+                                onOpenPdfUserGuide = { /* Xử lý mở PDF sau */ }
+                            )
                         }
                     }
                     // 3. Đẩy dữ liệu ra màn hình UI

@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-// Kế thừa ViewModel của Android
+// Kế thừa và Khởi tạo ViewModel của Android
 class BudgetViewModel(private val giaoDichDao: GiaoDichDao) : ViewModel() {
 
     // 1. Dòng chảy dữ liệu (StateFlow) chứa danh sách chi tiêu để giao diện UI hứng lấy và vẽ ra
@@ -32,6 +32,15 @@ class BudgetViewModel(private val giaoDichDao: GiaoDichDao) : ViewModel() {
                 idDanhMuc = idDanhMuc
             )
             giaoDichDao.themGiaoDich(giaoDichMoi)
+        }
+    }
+
+    // 3. Hàm xử lý logic khi người dùng nhấn nút "Xóa" một giao dịch
+    fun xoaGiaoDich(giaoDich: GiaoDich){
+        // Sử dụng Coroutines (viewModelScope.launch) để chạy lệnh xóa dưới nền,
+        // tránh làm đơ giao diện (UI) chính của điện thoại
+        viewModelScope.launch{
+            giaoDichDao.xoaGiaoDich(giaoDich)
         }
     }
 }
