@@ -4,41 +4,37 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.nhom_5_quan_li_chi_tieu.data.DanhMuc
 import com.example.nhom_5_quan_li_chi_tieu.data.GiaoDich
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThongKeScreen(
-    viewModel: BudgetViewModel,
-    onBackClick: () -> Unit
+    viewModel: BudgetViewModel
 ) {
-    // 1. Lắng nghe danh sách giao dịch từ ViewModel
+    // 1. Lắng nghe danh sách giao dịch và danh mục từ ViewModel
     val danhSach by viewModel.danhSachGiaoDich.collectAsState()
-    
-    // Danh mục giả lập tương ứng với MainScreen
-    val danhSachDanhMuc = listOf(
-        MockDanhMuc(1, "Ăn uống", "🍔", -1, 2000000.0),
-        MockDanhMuc(2, "Đi lại", "🚗", -1, 500000.0),
-        MockDanhMuc(3, "Mua sắm", "🛍️", -1, 1500000.0),
-        MockDanhMuc(4, "Lương", "💵", 1, 0.0),
-        MockDanhMuc(5, "Khác", "🏷️", -1, 1000000.0)
-    )
+    val danhSachDanhMuc by viewModel.danhSachDanhMuc.collectAsState()
 
-    // 2. Tính toán các chỉ số thống kê (Logic Kotlin)
-    // Tách riêng danh sách chi tiêu (không bao gồm Lương/Thu nhập)
-    val danhSachChiTieu = danhSach.filter { it.idDanhMuc != 4 }
+    // 2. Tính toán các chỉ số thống kê (Logic Kotlin dựa trên loại danh mục trong DB)
+    // Tách riêng danh sách giao dịch chi tiêu (loai == -1)
+    val danhSachChiTieu = danhSach.filter { gd ->
+        val dm = danhSachDanhMuc.find { it.id == gd.idDanhMuc }
+        dm?.loai == -1
+    }
     
     val tongSoBanGhi = danhSachChiTieu.size
     val tongChi = danhSachChiTieu.sumOf { it.soTien }
@@ -49,17 +45,50 @@ fun ThongKeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Thống Kê Chi Tiêu", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(8.dp, RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFF1B5E20),
+                                Color(0xFF2E7D32),
+                                Color(0xFF00897B)
+                            )
+                        ),
+                        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+                    )
+                    .padding(top = 40.dp, bottom = 16.dp, start = 20.dp, end = 20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("📊", fontSize = 20.sp)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Thống Kê Chi Tiêu",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Phân tích ngân sách của bạn",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -174,8 +203,8 @@ fun ThongKeScreen(
                     val phanTram = if (tongChi > 0) (tongChiDanhMuc / tongChi) * 100 else 0.0
                     
                     // Kiểm tra xem có vượt quá ngân sách tối đa đặt trước không
-                    val biVuotNganSach = tongChiDanhMuc > dm.nganSach
-                    val phanTramNganSachDaDung = if (dm.nganSach > 0) (tongChiDanhMuc / dm.nganSach) else 0.0
+                    val biVuotNganSach = dm.nganSachToiDa > 0 && tongChiDanhMuc > dm.nganSachToiDa
+                    val phanTramNganSachDaDung = if (dm.nganSachToiDa > 0) (tongChiDanhMuc / dm.nganSachToiDa) else 0.0
                     
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -190,10 +219,10 @@ fun ThongKeScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(dm.icon, fontSize = 22.sp)
+                                    Text(dm.bieuTuong, fontSize = 22.sp)
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = dm.ten,
+                                        text = dm.tenDanhMuc,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 16.sp,
                                         color = if (biVuotNganSach) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurface
@@ -213,43 +242,52 @@ fun ThongKeScreen(
                                 }
                             }
                             
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            // Thanh tiến trình ngân sách
-                            LinearProgressIndicator(
-                                progress = phanTramNganSachDaDung.toFloat().coerceAtMost(1f),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp),
-                                color = if (biVuotNganSach) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = String.format("Đã dùng: %.1f%% ngân sách", phanTramNganSachDaDung * 100),
-                                    fontSize = 11.sp,
-                                    color = if (biVuotNganSach) Color(0xFFC62828) else Color.Gray
+                            if (dm.nganSachToiDa > 0) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                
+                                // Thanh tiến trình ngân sách
+                                LinearProgressIndicator(
+                                    progress = phanTramNganSachDaDung.toFloat().coerceAtMost(1f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp),
+                                    color = if (biVuotNganSach) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
+                                
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = String.format("Đã dùng: %.1f%% ngân sách", phanTramNganSachDaDung * 100),
+                                        fontSize = 11.sp,
+                                        color = if (biVuotNganSach) Color(0xFFC62828) else Color.Gray
+                                    )
+                                    Text(
+                                        text = String.format("Hạn mức: %,.0fđ", dm.nganSachToiDa),
+                                        fontSize = 11.sp,
+                                        color = Color.Gray
+                                    )
+                                }
+                                
+                                if (biVuotNganSach) {
+                                    Text(
+                                        text = String.format("⚠️ ĐÃ VƯỢT HẠN MỨC NGÂN SÁCH %,.0fđ!", tongChiDanhMuc - dm.nganSachToiDa),
+                                        color = Color(0xFFD32F2F),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(top = 8.dp)
+                                    )
+                                }
+                            } else {
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = String.format("Hạn mức: %,.0fđ", dm.nganSach),
+                                    text = "Chưa thiết lập hạn mức ngân sách",
                                     fontSize = 11.sp,
                                     color = Color.Gray
-                                )
-                            }
-                            
-                            if (biVuotNganSach) {
-                                Text(
-                                    text = String.format("⚠️ ĐÃ VƯỢT HẠN MỨC NGÂN SÁCH %,.0fđ!", tongChiDanhMuc - dm.nganSach),
-                                    color = Color(0xFFD32F2F),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(top = 8.dp)
                                 )
                             }
                         }

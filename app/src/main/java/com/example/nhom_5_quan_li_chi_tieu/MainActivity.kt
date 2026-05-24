@@ -4,22 +4,45 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.nhom_5_quan_li_chi_tieu.data.BudgetDatabase
-import com.example.nhom_5_quan_li_chi_tieu.ui.screens.MainScreen
-import com.example.nhom_5_quan_li_chi_tieu.ui.screens.ThongKeScreen
-import com.example.nhom_5_quan_li_chi_tieu.ui.screens.GioiThieuScreen
-import com.example.nhom_5_quan_li_chi_tieu.ui.theme.Nhom5quanlichitieuTheme
-import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.outlined.Category
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.nhom_5_quan_li_chi_tieu.data.BudgetDatabase
+import com.example.nhom_5_quan_li_chi_tieu.ui.screens.DanhMucScreen
+import com.example.nhom_5_quan_li_chi_tieu.ui.screens.GioiThieuScreen
+import com.example.nhom_5_quan_li_chi_tieu.ui.screens.MainScreen
+import com.example.nhom_5_quan_li_chi_tieu.ui.screens.SplashScreen
+import com.example.nhom_5_quan_li_chi_tieu.ui.screens.ThongKeScreen
+import com.example.nhom_5_quan_li_chi_tieu.ui.theme.Nhom5quanlichitieuTheme
+import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
 
-
+data class NavigationItem(
+    val route: String,
+    val title: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,50 +57,104 @@ class MainActivity : ComponentActivity() {
             primary = xanhChuDao,
             secondary = xanhNhat,
             background = xamNen,
-            surface = Color.LightGray,       // Màu của các thẻ Card
+            surface = Color.White,       // Màu nền cho các Card
             onPrimary = Color.White,     // Màu chữ nằm trên nền xanh (ví dụ chữ trên Nút bấm)
             onSurface = Color.Black      // Màu chữ nằm trên thẻ Card
         )
 
         // 1. Khởi tạo Room Database lấy từ tầng DATA
         val db = BudgetDatabase.getDatabase(this)
-        val dao = db.giaoDichDao()
-
+        val giaoDichDao = db.giaoDichDao()
+        val danhMucDao = db.danhMucDao()
 
         // 2. Khởi tạo ViewModel lấy từ tầng VIEWMODEL
-        val viewModel = BudgetViewModel(dao)
+        val viewModel = BudgetViewModel(giaoDichDao, danhMucDao)
 
         setContent {
-            // Chú ý: Tên Theme này phải khớp với tên trong thư mục ui.theme của bạn
             Nhom5quanlichitieuTheme {
                 MaterialTheme(
                     colorScheme = BangMauApp
                 ) {
                     val navController = rememberNavController()
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentRoute = navBackStackEntry?.destination?.route
 
-                    NavHost(navController =navController, startDestination = "main"){
-                        composable("main"){
-                            MainScreen(
-                                viewModel = viewModel,
-                                onNavigateToThongKe = { navController.navigate("thongke") },
-                                onNavigateToAbout = { navController.navigate("about") }
-                            )
+                    val items = listOf(
+                        NavigationItem("main", "Trang Chủ", Icons.Filled.Home, Icons.Outlined.Home),
+                        NavigationItem("thongke", "Thống Kê", Icons.Filled.PieChart, Icons.Outlined.PieChart),
+                        NavigationItem("danhmuc", "Danh Mục", Icons.Filled.Category, Icons.Outlined.Category),
+                        NavigationItem("about", "Giới Thiệu", Icons.Filled.Info, Icons.Outlined.Info)
+                    )
+
+                    // Ẩn thanh điều hướng khi đang ở màn hình chờ (Splash)
+                    val showBottomBar = currentRoute != "splash"
+
+                    Scaffold(
+                        bottomBar = {
+                            if (showBottomBar) {
+                                NavigationBar(
+                                    containerColor = Color.White,
+                                    tonalElevation = 8.dp
+                                ) {
+                                    items.forEach { item ->
+                                        val isSelected = currentRoute == item.route
+                                        NavigationBarItem(
+                                            selected = isSelected,
+                                            onClick = {
+                                                if (currentRoute != item.route) {
+                                                    navController.navigate(item.route) {
+                                                        popUpTo(navController.graph.startDestinationId) {
+                                                            saveState = true
+                                                        }
+                                                        launchSingleTop = true
+                                                        restoreState = true
+                                                    }
+                                                }
+                                            },
+                                            icon = {
+                                                Icon(
+                                                    imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                                    contentDescription = item.title
+                                                )
+                                            },
+                                            label = { Text(item.title, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) }
+                                        )
+                                    }
+                                }
+                            }
                         }
-                        composable("thongke"){
-                            ThongKeScreen(
-                                viewModel = viewModel,
-                                onBackClick = { navController.popBackStack() }
-                            )
-                        }
-                        composable("about"){
-                            GioiThieuScreen(
-                                onBackClick = { navController.popBackStack() },
-                                onOpenPdfUserGuide = { /* Xử lý mở PDF sau */ }
-                            )
+                    ) { innerPadding ->
+                        NavHost(
+                            navController = navController,
+                            startDestination = "splash",
+                            modifier = Modifier.padding(innerPadding)
+                        ) {
+                            // Màn hình chờ 4 giây
+                            composable("splash") {
+                                SplashScreen(
+                                    onTimeout = {
+                                        navController.navigate("main") {
+                                            popUpTo("splash") { inclusive = true }
+                                        }
+                                    }
+                                )
+                            }
+                            composable("main") {
+                                MainScreen(viewModel = viewModel)
+                            }
+                            composable("thongke") {
+                                ThongKeScreen(viewModel = viewModel)
+                            }
+                            composable("danhmuc") {
+                                DanhMucScreen(viewModel = viewModel)
+                            }
+                            composable("about") {
+                                GioiThieuScreen(
+                                    onOpenPdfUserGuide = { /* Xử lý mở PDF sau */ }
+                                )
+                            }
                         }
                     }
-                    // 3. Đẩy dữ liệu ra màn hình UI
-
                 }
             }
         }
