@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nhom_5_quan_li_chi_tieu.data.DanhMuc
@@ -41,6 +43,7 @@ fun MainScreen(
     // Đọc danh mục động từ database
     val danhSachDanhMuc by viewModel.danhSachDanhMuc.collectAsState()
     var danhMucDuocChon by remember { mutableStateOf<DanhMuc?>(null) }
+    var editingGiaoDich by remember { mutableStateOf<GiaoDich?>(null) }
     var inputError by remember { mutableStateOf<String?>(null) }
     val danhSach by viewModel.danhSachGiaoDich.collectAsState()
 
@@ -318,30 +321,80 @@ fun MainScreen(
                             }
                         }
 
-                        // 2.5 Nút lưu
-                        Button(
-                            onClick = {
-                                val parseSoTien = soTien.toDoubleOrNull()
-                                if (parseSoTien == null || parseSoTien <= 0) {
-                                    inputError = "Vui lòng nhập số tiền lớn hơn 0"
-                                } else if (ghiChu.isBlank()) {
-                                    inputError = "Vui lòng nhập ghi chú"
-                                } else if (danhMucDuocChon == null) {
-                                    inputError = "Vui lòng chọn hoặc thêm danh mục"
-                                } else {
-                                    viewModel.luuGiaoDich(parseSoTien, ghiChu, danhMucDuocChon!!.id)
-                                    soTien = ""
-                                    ghiChu = ""
-                                    inputError = null
+                        // 2.5 Nút lưu / Cập nhật
+                        if (editingGiaoDich == null) {
+                            Button(
+                                onClick = {
+                                    val parseSoTien = soTien.toDoubleOrNull()
+                                    if (parseSoTien == null || parseSoTien <= 0) {
+                                        inputError = "Vui lòng nhập số tiền lớn hơn 0"
+                                    } else if (ghiChu.isBlank()) {
+                                        inputError = "Vui lòng nhập ghi chú"
+                                    } else if (danhMucDuocChon == null) {
+                                        inputError = "Vui lòng chọn hoặc thêm danh mục"
+                                    } else {
+                                        viewModel.luuGiaoDich(parseSoTien, ghiChu, danhMucDuocChon!!.id)
+                                        soTien = ""
+                                        ghiChu = ""
+                                        inputError = null
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Save")
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Lưu Giao Dịch", fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = { 
+                                        editingGiaoDich = null
+                                        soTien = ""
+                                        ghiChu = ""
+                                        inputError = null
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Hủy")
                                 }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Save")
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Lưu Giao Dịch", fontWeight = FontWeight.Bold)
+                                Button(
+                                    onClick = {
+                                        val parseSoTien = soTien.toDoubleOrNull()
+                                        if (parseSoTien == null || parseSoTien <= 0) {
+                                            inputError = "Vui lòng nhập số tiền hợp lệ"
+                                        } else if (ghiChu.isBlank()) {
+                                            inputError = "Vui lòng nhập ghi chú"
+                                        } else if (danhMucDuocChon == null) {
+                                            inputError = "Vui lòng chọn danh mục"
+                                        } else {
+                                            // Tạo bản sao của giao dịch đang sửa và nạp dữ liệu mới vào
+                                            val updatedGd = editingGiaoDich!!.copy(
+                                                soTien = parseSoTien,
+                                                ghiChu = ghiChu,
+                                                idDanhMuc = danhMucDuocChon!!.id
+                                            )
+                                            viewModel.suaGiaoDich(updatedGd)
+                                            
+                                            // Reset form về trạng thái Thêm Mới
+                                            editingGiaoDich = null
+                                            soTien = ""
+                                            ghiChu = ""
+                                            inputError = null
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)), // Màu cam
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Update")
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Cập Nhật", fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }
@@ -392,9 +445,21 @@ fun MainScreen(
                                     Text(dm.bieuTuong, fontSize = 20.sp)
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(text = dm.tenDanhMuc, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                    Text(text = gd.ghiChu, color = Color.Gray, fontSize = 12.sp)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = dm.tenDanhMuc, 
+                                        fontWeight = FontWeight.Bold, 
+                                        fontSize = 15.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = gd.ghiChu, 
+                                        color = Color.Gray, 
+                                        fontSize = 12.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                             
@@ -408,7 +473,23 @@ fun MainScreen(
                                     fontSize = 15.sp
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-
+                                IconButton(
+                                    onClick = { 
+                                        // Điền ngược dữ liệu lên form nhập liệu ở trên cùng
+                                        editingGiaoDich = gd
+                                        soTien = gd.soTien.toLong().toString() // Ép sang Long để bỏ số .0 (ví dụ 30000.0 -> 30000)
+                                        ghiChu = gd.ghiChu
+                                        isThuNhap = isIncome
+                                        danhMucDuocChon = dm
+                                        inputError = null
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Sửa giao dịch",
+                                        tint = Color(0xFFC62828)
+                                    )
+                                }
                                 IconButton(
                                     onClick = { viewModel.xoaGiaoDich(gd) }
                                 ) {

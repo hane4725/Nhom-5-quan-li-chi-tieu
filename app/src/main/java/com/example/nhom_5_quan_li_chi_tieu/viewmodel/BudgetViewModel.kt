@@ -47,6 +47,14 @@ class BudgetViewModel(
         }
     }
 
+    // 3. Hàm xử lý logic khi người dùng nhấn nút "Cập nhật" (Sửa giao dịch)
+    fun suaGiaoDich(giaoDich: GiaoDich) {
+        
+        viewModelScope.launch {
+            giaoDichDao.suaGiaoDich(giaoDich) // Cập nhật đè lên dữ liệu cũ trong Database
+        }
+    }
+
     // 3. Hàm xử lý logic khi người dùng nhấn nút "Xóa" một giao dịch
     fun xoaGiaoDich(giaoDich: GiaoDich){
         viewModelScope.launch{
