@@ -16,8 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nhom_5_quan_li_chi_tieu.data.DanhMuc
-import com.example.nhom_5_quan_li_chi_tieu.data.GiaoDich
+import com.example.nhom_5_quan_li_chi_tieu.data.local.DanhMuc
+import com.example.nhom_5_quan_li_chi_tieu.data.local.GiaoDich
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +53,7 @@ fun ThongKeScreen(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
                                 Color(0xFF1B5E20),
-                                Color(0xFF2E7D32),
+                                MaterialTheme.colorScheme.primary,
                                 Color(0xFF00897B)
                             )
                         ),
@@ -134,7 +134,7 @@ fun ThongKeScreen(
                             Text(
                                 text = String.format("%,.0fđ", tongChi),
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFC62828)
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
 
@@ -161,7 +161,7 @@ fun ThongKeScreen(
                             Text(
                                 text = String.format("%,.0fđ", maxChi),
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFC62828)
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
 
@@ -175,7 +175,7 @@ fun ThongKeScreen(
                             Text(
                                 text = String.format("%,.0fđ", minChi),
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF2E7D32)
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -225,7 +225,7 @@ fun ThongKeScreen(
                                         text = dm.tenDanhMuc,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 16.sp,
-                                        color = if (biVuotNganSach) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurface
+                                        color = if (biVuotNganSach) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
@@ -251,7 +251,7 @@ fun ThongKeScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(8.dp),
-                                    color = if (biVuotNganSach) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primary,
+                                    color = if (biVuotNganSach) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
                                 
@@ -264,7 +264,7 @@ fun ThongKeScreen(
                                     Text(
                                         text = String.format("Đã dùng: %.1f%% ngân sách", phanTramNganSachDaDung * 100),
                                         fontSize = 11.sp,
-                                        color = if (biVuotNganSach) Color(0xFFC62828) else Color.Gray
+                                        color = if (biVuotNganSach) MaterialTheme.colorScheme.error else Color.Gray
                                     )
                                     Text(
                                         text = String.format("Hạn mức: %,.0fđ", dm.nganSachToiDa),
@@ -276,7 +276,7 @@ fun ThongKeScreen(
                                 if (biVuotNganSach) {
                                     Text(
                                         text = String.format("⚠️ ĐÃ VƯỢT HẠN MỨC NGÂN SÁCH %,.0fđ!", tongChiDanhMuc - dm.nganSachToiDa),
-                                        color = Color(0xFFD32F2F),
+                                        color = MaterialTheme.colorScheme.error,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp,
                                         modifier = Modifier.padding(top = 8.dp)

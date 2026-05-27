@@ -1,4 +1,4 @@
-package com.example.nhom_5_quan_li_chi_tieu.data
+package com.example.nhom_5_quan_li_chi_tieu.data.local
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index

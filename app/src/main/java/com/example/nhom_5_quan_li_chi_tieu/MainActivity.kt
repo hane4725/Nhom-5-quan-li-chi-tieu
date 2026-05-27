@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,19 +25,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.ViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.nhom_5_quan_li_chi_tieu.data.BudgetDatabase
+import com.example.nhom_5_quan_li_chi_tieu.data.local.BudgetDatabase
 import com.example.nhom_5_quan_li_chi_tieu.ui.screens.DanhMucScreen
 import com.example.nhom_5_quan_li_chi_tieu.ui.screens.GioiThieuScreen
 import com.example.nhom_5_quan_li_chi_tieu.ui.screens.MainScreen
 import com.example.nhom_5_quan_li_chi_tieu.ui.screens.SplashScreen
 import com.example.nhom_5_quan_li_chi_tieu.ui.screens.ThongKeScreen
-import com.example.nhom_5_quan_li_chi_tieu.ui.theme.Nhom5quanlichitieuTheme
+import com.example.nhom_5_quan_li_chi_tieu.repository.BudgetRepository
+import com.example.nhom_5_quan_li_chi_tieu.ui.theme.BudgetBuddyTheme
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
-
+import com.example.nhom_5_quan_li_chi_tieu.data.local.SettingsDataStore
+import com.example.nhom_5_quan_li_chi_tieu.repository.SettingsRepository
 data class NavigationItem(
     val route: String,
     val title: String,
@@ -48,34 +52,25 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("BTL_Lifecycle", "0. onCreate: Khởi tạo ứng dụng")
-
-        val xanhChuDao = Color(0xFF2E7D32)
-        val xanhNhat = Color(0xFFE8F5E9)
-        val xamNen = Color(0xFFF5F5F5)
-
-        val BangMauApp = lightColorScheme(
-            primary = xanhChuDao,
-            secondary = xanhNhat,
-            background = xamNen,
-            surface = Color.White,       // Màu nền cho các Card
-            onPrimary = Color.White,     // Màu chữ nằm trên nền xanh (ví dụ chữ trên Nút bấm)
-            onSurface = Color.Black      // Màu chữ nằm trên thẻ Card
-        )
-
-        // 1. Khởi tạo Room Database lấy từ tầng DATA
+        // 1. Khởi tạo Room Database lấy từ tầng DATA (Local)
         val db = BudgetDatabase.getDatabase(this)
         val giaoDichDao = db.giaoDichDao()
         val danhMucDao = db.danhMucDao()
 
-        // 2. Khởi tạo ViewModel lấy từ tầng VIEWMODEL
-        val viewModel = BudgetViewModel(giaoDichDao, danhMucDao)
+        // 2. Khởi tạo Repository lấy từ tầng REPOSITORY
+        val repositoryBudget = BudgetRepository(giaoDichDao, danhMucDao)
+        val settingsDataStore = SettingsDataStore(this)
+        val repositorySetting = SettingsRepository(settingsDataStore)
+
+        // 3. Khởi tạo ViewModel lấy từ tầng VIEWMODEL
+        val viewModel = BudgetViewModel(repositoryBudget, repositorySetting)
+
+
 
         setContent {
-            Nhom5quanlichitieuTheme {
-                MaterialTheme(
-                    colorScheme = BangMauApp
-                ) {
-                    val navController = rememberNavController()
+            val isDarkMode by viewModel.isDarkMode.collectAsState()
+            BudgetBuddyTheme(isDarkMode) {
+                val navController = rememberNavController()
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -83,7 +78,7 @@ class MainActivity : ComponentActivity() {
                         NavigationItem("main", "Trang Chủ", Icons.Filled.Home, Icons.Outlined.Home),
                         NavigationItem("thongke", "Thống Kê", Icons.Filled.PieChart, Icons.Outlined.PieChart),
                         NavigationItem("danhmuc", "Danh Mục", Icons.Filled.Category, Icons.Outlined.Category),
-                        NavigationItem("about", "Giới Thiệu", Icons.Filled.Info, Icons.Outlined.Info)
+                        NavigationItem("about", "Cài đặt", Icons.Filled.Info, Icons.Outlined.Info)
                     )
 
                     // Ẩn thanh điều hướng khi đang ở màn hình chờ (Splash)
@@ -93,7 +88,7 @@ class MainActivity : ComponentActivity() {
                         bottomBar = {
                             if (showBottomBar) {
                                 NavigationBar(
-                                    containerColor = Color.White,
+
                                     tonalElevation = 8.dp
                                 ) {
                                     items.forEach { item ->
@@ -149,18 +144,14 @@ class MainActivity : ComponentActivity() {
                                 DanhMucScreen(viewModel = viewModel)
                             }
                             composable("about") {
-                                GioiThieuScreen(
-                                    onOpenPdfUserGuide = { /* Xử lý mở PDF sau */ }
-                                )
+                                GioiThieuScreen(viewModel = viewModel)
                             }
                         }
                     }
                 }
             }
         }
-    }
 
-    private fun compossable(string: String, function: () -> Unit) {}
 
     override fun onStart() {
         super.onStart()
@@ -188,6 +179,6 @@ class MainActivity : ComponentActivity() {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    Nhom5quanlichitieuTheme {
+    BudgetBuddyTheme {
     }
 }

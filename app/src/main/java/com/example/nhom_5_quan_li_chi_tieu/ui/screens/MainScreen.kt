@@ -26,8 +26,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nhom_5_quan_li_chi_tieu.data.DanhMuc
-import com.example.nhom_5_quan_li_chi_tieu.data.GiaoDich
+import com.example.nhom_5_quan_li_chi_tieu.data.local.DanhMuc
+import com.example.nhom_5_quan_li_chi_tieu.data.local.GiaoDich
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,7 +84,7 @@ fun MainScreen(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
                                 Color(0xFF1B5E20),
-                                Color(0xFF2E7D32),
+                                MaterialTheme.colorScheme.primary,
                                 Color(0xFF00897B)
                             )
                         ),
@@ -142,7 +142,7 @@ fun MainScreen(
                         modifier = Modifier
                             .background(
                                 Brush.horizontalGradient(
-                                    colors = listOf(Color(0xFF1B5E20), Color(0xFF2E7D32))
+                                    colors = listOf(Color(0xFF1B5E20), MaterialTheme.colorScheme.primary)
                                 )
                             )
                             .padding(24.dp)
@@ -203,14 +203,14 @@ fun MainScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
                                 .padding(4.dp)
                         ) {
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .background(
-                                        if (!isThuNhap) Color(0xFFC62828) else Color.Transparent,
+                                        if (!isThuNhap) MaterialTheme.colorScheme.error else Color.Transparent,
                                         RoundedCornerShape(10.dp)
                                     )
                                     .clickable { isThuNhap = false }
@@ -228,7 +228,7 @@ fun MainScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .background(
-                                        if (isThuNhap) Color(0xFF2E7D32) else Color.Transparent,
+                                        if (isThuNhap) MaterialTheme.colorScheme.primary else Color.Transparent,
                                         RoundedCornerShape(10.dp)
                                     )
                                     .clickable { isThuNhap = true }
@@ -313,7 +313,7 @@ fun MainScreen(
                                 ) {
                                     Text(
                                         text = "⚠️ Vượt ngân sách! Danh mục [${danhMucDuocChon!!.tenDanhMuc}] hạn mức là ${String.format("%,.0fđ", danhMucDuocChon!!.nganSachToiDa)}. Bạn đã tiêu ${String.format("%,.0fđ", tongTienDaChiCungDanhMuc)}.",
-                                        color = Color(0xFFE65100),
+                                        color = MaterialTheme.colorScheme.tertiary,
                                         modifier = Modifier.padding(8.dp),
                                         fontSize = 12.sp
                                     )
@@ -341,7 +341,7 @@ fun MainScreen(
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = MaterialTheme.shapes.medium
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = "Save")
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -357,7 +357,7 @@ fun MainScreen(
                                         inputError = null
                                     },
                                     modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = MaterialTheme.shapes.medium
                                 ) {
                                     Text("Hủy")
                                 }
@@ -387,8 +387,8 @@ fun MainScreen(
                                         }
                                     },
                                     modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)), // Màu cam
-                                    shape = RoundedCornerShape(12.dp)
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary), // Màu cam
+                                    shape = MaterialTheme.shapes.medium
                                 ) {
                                     Icon(Icons.Default.Edit, contentDescription = "Update")
                                     Spacer(modifier = Modifier.width(4.dp))
@@ -468,7 +468,7 @@ fun MainScreen(
                             ) {
                                 Text(
                                     text = (if (isIncome) "+" else "-") + String.format("%,.0fđ", gd.soTien),
-                                    color = if (isIncome) Color(0xFF2E7D32) else Color(0xFFC62828),
+                                    color = if (isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp
                                 )
@@ -487,7 +487,7 @@ fun MainScreen(
                                     Icon(
                                         imageVector = Icons.Default.Edit,
                                         contentDescription = "Sửa giao dịch",
-                                        tint = Color(0xFFC62828)
+                                        tint = MaterialTheme.colorScheme.error
                                     )
                                 }
                                 IconButton(
@@ -496,7 +496,7 @@ fun MainScreen(
                                     Icon(
                                         imageVector = Icons.Default.Delete,
                                         contentDescription = "Xóa giao dịch",
-                                        tint = Color(0xFFC62828)
+                                        tint = MaterialTheme.colorScheme.error
                                     )
                                 }
                             }

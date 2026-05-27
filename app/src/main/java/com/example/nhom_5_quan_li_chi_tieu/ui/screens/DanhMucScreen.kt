@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import com.example.nhom_5_quan_li_chi_tieu.data.DanhMuc
+import com.example.nhom_5_quan_li_chi_tieu.data.local.DanhMuc
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,7 +57,7 @@ fun DanhMucScreen(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
                                 Color(0xFF1B5E20),
-                                Color(0xFF2E7D32),
+                                MaterialTheme.colorScheme.primary,
                                 Color(0xFF00897B)
                             )
                         ),
@@ -128,7 +128,7 @@ fun DanhMucScreen(
                                 onClick = { isThuNhap = false },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (!isThuNhap) Color(0xFFC62828) else Color.Transparent,
+                                    containerColor = if (!isThuNhap) MaterialTheme.colorScheme.error else Color.Transparent,
                                     contentColor = if (!isThuNhap) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 shape = RoundedCornerShape(6.dp),
@@ -140,7 +140,7 @@ fun DanhMucScreen(
                                 onClick = { isThuNhap = true },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isThuNhap) Color(0xFF2E7D32) else Color.Transparent,
+                                    containerColor = if (isThuNhap) MaterialTheme.colorScheme.primary else Color.Transparent,
                                     contentColor = if (isThuNhap) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 shape = RoundedCornerShape(6.dp),
@@ -293,7 +293,7 @@ fun DanhMucScreen(
                                         ) {
                                             Text(
                                                 text = "Thu nhập",
-                                                color = Color(0xFF2E7D32),
+                                                color = MaterialTheme.colorScheme.primary,
                                                 fontSize = 11.sp,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                                 fontWeight = FontWeight.Bold
@@ -333,7 +333,7 @@ fun DanhMucScreen(
                                     Icon(
                                         imageVector = Icons.Default.Delete,
                                         contentDescription = "Xóa danh mục",
-                                        tint = Color(0xFFC62828)
+                                        tint = MaterialTheme.colorScheme.error
                                     )
                                 }
                             }

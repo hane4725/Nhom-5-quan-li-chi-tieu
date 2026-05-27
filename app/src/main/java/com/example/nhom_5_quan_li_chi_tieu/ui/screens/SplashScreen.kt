@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -67,7 +68,7 @@ fun SplashScreen(onTimeout: () -> Unit) {
                 Brush.verticalGradient(
                     colors = listOf(
                         Color(0xFF1B5E20), // Xanh đậm trên
-                        Color(0xFF2E7D32), // Xanh chủ đạo giữa
+                        MaterialTheme.colorScheme.primary, // Xanh chủ đạo giữa
                         Color(0xFF43A047)  // Xanh sáng dưới
                     )
                 )
