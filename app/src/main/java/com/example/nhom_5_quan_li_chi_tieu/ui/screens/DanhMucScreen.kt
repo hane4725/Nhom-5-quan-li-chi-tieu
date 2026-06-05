@@ -24,15 +24,18 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+
 import com.example.nhom_5_quan_li_chi_tieu.data.local.DanhMuc
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
+import com.example.nhom_5_quan_li_chi_tieu.viewmodel.DanhMucUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DanhMucScreen(
     viewModel: BudgetViewModel
 ) {
-    val danhSachDanhMuc by viewModel.danhSachDanhMuc.collectAsState()
+    val danhMucUiState by viewModel.danhSachDanhMucState.collectAsState()
+
 
     // Trạng thái cho Dialog sửa ngân sách
     var showEditDialog by remember { mutableStateOf(false) }
@@ -240,15 +243,39 @@ fun DanhMucScreen(
                 )
             }
 
-            if (danhSachDanhMuc.isEmpty()) {
-                item {
-                    Text(
-                        text = "Chưa có danh mục nào. Hãy tạo danh mục đầu tiên!",
-                        color = Color.Gray
-                    )
+            when (danhMucUiState) {
+                is DanhMucUiState.Loading -> {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                 }
-            } else {
-                items(danhSachDanhMuc) { dm ->
+                is DanhMucUiState.Error -> {
+                    val errorMsg = (danhMucUiState as DanhMucUiState.Error).thongBaoLoi
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("⚠️ Lỗi: $errorMsg", color = Color.Red, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                is DanhMucUiState.Success -> {
+                    val danhSachDanhMuc = (danhMucUiState as DanhMucUiState.Success).danhSach
+                    if (danhSachDanhMuc.isEmpty()) {
+                        item {
+                            Text(
+                                text = "Chưa có danh mục nào. Hãy tạo danh mục đầu tiên!",
+                                color = Color.Gray
+                            )
+                        }
+                    } else {
+                        items(danhSachDanhMuc) { dm ->
                     val isIncome = dm.loai == 1
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -339,6 +366,8 @@ fun DanhMucScreen(
                             }
                         }
                     }
+                }
+            }
                 }
             }
         }

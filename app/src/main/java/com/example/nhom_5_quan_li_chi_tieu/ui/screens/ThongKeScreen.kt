@@ -19,6 +19,9 @@ import androidx.compose.ui.unit.sp
 import com.example.nhom_5_quan_li_chi_tieu.data.local.DanhMuc
 import com.example.nhom_5_quan_li_chi_tieu.data.local.GiaoDich
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
+import com.example.nhom_5_quan_li_chi_tieu.viewmodel.DanhMucUiState
+import com.example.nhom_5_quan_li_chi_tieu.viewmodel.GiaoDichUiState
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,19 +29,30 @@ fun ThongKeScreen(
     viewModel: BudgetViewModel
 ) {
     // 1. Lắng nghe danh sách giao dịch và danh mục từ ViewModel
-    val danhSach by viewModel.danhSachGiaoDich.collectAsState()
-    val danhSachDanhMuc by viewModel.danhSachDanhMuc.collectAsState()
 
+    val danhMucUiState by viewModel.danhSachDanhMucState.collectAsState()
+    val danhSachDanhMuc = if (danhMucUiState is DanhMucUiState.Success) {
+        (danhMucUiState as DanhMucUiState.Success).danhSach //Lấy danh sách ra khỏi hộp
+    } else {
+        emptyList()
+    }
+
+    val giaoDichUiState by viewModel.danhSachGiaoDichState.collectAsState()
+    val danhSachGiaoDich = if (giaoDichUiState is GiaoDichUiState.Success) {
+        (giaoDichUiState as GiaoDichUiState.Success).danhSach //Lấy danh sách ra khỏi hộp
+    }else{
+        emptyList()
+    }
     // 2. Tính toán các chỉ số thống kê (Logic Kotlin dựa trên loại danh mục trong DB)
     // Tách riêng danh sách giao dịch chi tiêu (loai == -1)
-    val danhSachChiTieu = danhSach.filter { gd ->
+    val danhSachChiTieu = danhSachGiaoDich.filter { gd ->
         val dm = danhSachDanhMuc.find { it.id == gd.idDanhMuc }
         dm?.loai == -1
     }
-    
+
     val tongSoBanGhi = danhSachChiTieu.size
     val tongChi = danhSachChiTieu.sumOf { it.soTien }
-    
+
     val giaTriTB = if (tongSoBanGhi > 0) tongChi / tongSoBanGhi else 0.0
     val maxChi = if (tongSoBanGhi > 0) danhSachChiTieu.maxOf { it.soTien } else 0.0
     val minChi = if (tongSoBanGhi > 0) danhSachChiTieu.minOf { it.soTien } else 0.0
@@ -56,8 +70,7 @@ fun ThongKeScreen(
                                 MaterialTheme.colorScheme.primary,
                                 Color(0xFF00897B)
                             )
-                        ),
-                        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+                        ), shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
                     )
                     .padding(top = 40.dp, bottom = 16.dp, start = 20.dp, end = 20.dp)
             ) {
@@ -89,206 +102,247 @@ fun ThongKeScreen(
                     }
                 }
             }
-        }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // ================= KHU VỰC 1: chỉ số cực trị (Tổng, TB, Max, Min) =================
-            item {
-                Text(
-                    text = "Chỉ Số Chi Tiêu Cốt Lõi",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            item {
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+        }) { paddingValues ->
+        when (giaoDichUiState) {
+            // TRƯỜNG HỢP A: ĐANG TẢI -> Hiển thị vòng tròn ở giữa màn hình
+            is GiaoDichUiState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Tổng số lần chi:", color = Color.Gray)
-                            Text("$tongSoBanGhi lần", fontWeight = FontWeight.Bold)
-                        }
-                        
-                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Tổng tiền chi tiêu:", color = Color.Gray)
-                            Text(
-                                text = String.format("%,.0fđ", tongChi),
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-
-                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Trung bình mỗi lần chi:", color = Color.Gray)
-                            Text(
-                                text = String.format("%,.0fđ", giaTriTB),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Khoản chi lớn nhất (Max):", color = Color.Gray)
-                            Text(
-                                text = String.format("%,.0fđ", maxChi),
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-
-                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Khoản chi nhỏ nhất (Min):", color = Color.Gray)
-                            Text(
-                                text = String.format("%,.0fđ", minChi),
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
-
-            // ================= KHU VỰC 2: phần trăm & ngân sách theo danh mục =================
-            item {
-                Text(
-                    text = "Chi Tiêu Theo Danh Mục & Ngân Sách",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            val danhMucChi = danhSachDanhMuc.filter { it.loai == -1 }
-            
-            if (tongChi == 0.0) {
-                item {
-                    Text("Chưa có dữ liệu chi tiêu để tính phần trăm.", color = Color.Gray)
+            // TRƯỜNG HỢP B: BỊ LỖI -> Hiển thị chữ báo lỗi màu đỏ
+            is GiaoDichUiState.Error -> {
+                val thongBaoLoi = (giaoDichUiState as GiaoDichUiState.Error).thongBaoLoi
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues), // ← THÊM DÒNG NÀY để tránh bị TopBar che
+                    contentAlignment = Alignment.Center // ← Hiện ra GIỮA màn hình
+                ) {
+                    Text(
+                        text = "⚠️ Lỗi: $thongBaoLoi",
+                        color = Color.Red,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-            } else {
-                items(danhMucChi) { dm ->
-                    val tongChiDanhMuc = danhSach.filter { it.idDanhMuc == dm.id }.sumOf { it.soTien }
-                    val phanTram = if (tongChi > 0) (tongChiDanhMuc / tongChi) * 100 else 0.0
-                    
-                    // Kiểm tra xem có vượt quá ngân sách tối đa đặt trước không
-                    val biVuotNganSach = dm.nganSachToiDa > 0 && tongChiDanhMuc > dm.nganSachToiDa
-                    val phanTramNganSachDaDung = if (dm.nganSachToiDa > 0) (tongChiDanhMuc / dm.nganSachToiDa) else 0.0
-                    
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (biVuotNganSach) Color(0xFFFFEBEE) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            }
+            // TRƯỜNG HỢP C: DỮ LIỆU ĐÃ TẢI XONG -> Hiển thị LazyColumn như cũ
+            is GiaoDichUiState.Success -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // ================= KHU VỰC 1: chỉ số cực trị (Tổng, TB, Max, Min) =================
+                    item {
+                        Text(
+                            text = "Chỉ Số Chi Tiêu Cốt Lõi",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                    }
+
+                    item {
+                        ElevatedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(dm.bieuTuong, fontSize = 22.sp)
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Tổng số lần chi:", color = Color.Gray)
+                                    Text("$tongSoBanGhi lần", fontWeight = FontWeight.Bold)
+                                }
+
+                                Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Tổng tiền chi tiêu:", color = Color.Gray)
                                     Text(
-                                        text = dm.tenDanhMuc,
+                                        text = String.format("%,.0fđ", tongChi),
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = if (biVuotNganSach) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                                        color = MaterialTheme.colorScheme.error
                                     )
                                 }
-                                Column(horizontalAlignment = Alignment.End) {
+
+                                Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Trung bình mỗi lần chi:", color = Color.Gray)
                                     Text(
-                                        text = String.format("%,.0fđ", tongChiDanhMuc),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
+                                        text = String.format("%,.0fđ", giaTriTB),
+                                        fontWeight = FontWeight.Bold
                                     )
+                                }
+
+                                Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Khoản chi lớn nhất (Max):", color = Color.Gray)
                                     Text(
-                                        text = String.format("%.1f%% tổng chi", phanTram),
-                                        fontSize = 12.sp,
-                                        color = Color.Gray
+                                        text = String.format("%,.0fđ", maxChi),
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+
+                                Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Khoản chi nhỏ nhất (Min):", color = Color.Gray)
+                                    Text(
+                                        text = String.format("%,.0fđ", minChi),
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
-                            
-                            if (dm.nganSachToiDa > 0) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                
-                                // Thanh tiến trình ngân sách
-                                LinearProgressIndicator(
-                                    progress = phanTramNganSachDaDung.toFloat().coerceAtMost(1f),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(8.dp),
-                                    color = if (biVuotNganSach) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        }
+                    }
+
+                    // ================= KHU VỰC 2: phần trăm & ngân sách theo danh mục =================
+                    item {
+                        Text(
+                            text = "Chi Tiêu Theo Danh Mục & Ngân Sách",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    val danhMucChi = danhSachDanhMuc.filter { it.loai == -1 }
+
+                    if (tongChi == 0.0) {
+                        item {
+                            Text("Chưa có dữ liệu chi tiêu để tính phần trăm.", color = Color.Gray)
+                        }
+                    } else {
+                        items(danhMucChi) { dm ->
+                            val tongChiDanhMuc =
+                                danhSachGiaoDich.filter { it.idDanhMuc == dm.id }.sumOf { it.soTien }
+                            val phanTram =
+                                if (tongChi > 0) (tongChiDanhMuc / tongChi) * 100 else 0.0
+
+                            // Kiểm tra xem có vượt quá ngân sách tối đa đặt trước không
+                            val biVuotNganSach =
+                                dm.nganSachToiDa > 0 && tongChiDanhMuc > dm.nganSachToiDa
+                            val phanTramNganSachDaDung =
+                                if (dm.nganSachToiDa > 0) (tongChiDanhMuc / dm.nganSachToiDa) else 0.0
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (biVuotNganSach) Color(0xFFFFEBEE) else MaterialTheme.colorScheme.surfaceVariant.copy(
+                                        alpha = 0.3f
+                                    )
                                 )
-                                
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = String.format("Đã dùng: %.1f%% ngân sách", phanTramNganSachDaDung * 100),
-                                        fontSize = 11.sp,
-                                        color = if (biVuotNganSach) MaterialTheme.colorScheme.error else Color.Gray
-                                    )
-                                    Text(
-                                        text = String.format("Hạn mức: %,.0fđ", dm.nganSachToiDa),
-                                        fontSize = 11.sp,
-                                        color = Color.Gray
-                                    )
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(dm.bieuTuong, fontSize = 22.sp)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = dm.tenDanhMuc,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 16.sp,
+                                                color = if (biVuotNganSach) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = String.format("%,.0fđ", tongChiDanhMuc),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 15.sp
+                                            )
+                                            Text(
+                                                text = String.format("%.1f%% tổng chi", phanTram),
+                                                fontSize = 12.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                    }
+
+                                    if (dm.nganSachToiDa > 0) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+
+                                        // Thanh tiến trình ngân sách
+                                        LinearProgressIndicator(
+                                            progress = phanTramNganSachDaDung.toFloat()
+                                                .coerceAtMost(1f),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(8.dp),
+                                            color = if (biVuotNganSach) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                        )
+
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 4.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = String.format(
+                                                    "Đã dùng: %.1f%% ngân sách",
+                                                    phanTramNganSachDaDung * 100
+                                                ),
+                                                fontSize = 11.sp,
+                                                color = if (biVuotNganSach) MaterialTheme.colorScheme.error else Color.Gray
+                                            )
+                                            Text(
+                                                text = String.format(
+                                                    "Hạn mức: %,.0fđ", dm.nganSachToiDa
+                                                ), fontSize = 11.sp, color = Color.Gray
+                                            )
+                                        }
+
+                                        if (biVuotNganSach) {
+                                            Text(
+                                                text = String.format(
+                                                    "⚠️ ĐÃ VƯỢT HẠN MỨC NGÂN SÁCH %,.0fđ!",
+                                                    tongChiDanhMuc - dm.nganSachToiDa
+                                                ),
+                                                color = MaterialTheme.colorScheme.error,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                modifier = Modifier.padding(top = 8.dp)
+                                            )
+                                        }
+                                    } else {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Chưa thiết lập hạn mức ngân sách",
+                                            fontSize = 11.sp,
+                                            color = Color.Gray
+                                        )
+                                    }
                                 }
-                                
-                                if (biVuotNganSach) {
-                                    Text(
-                                        text = String.format("⚠️ ĐÃ VƯỢT HẠN MỨC NGÂN SÁCH %,.0fđ!", tongChiDanhMuc - dm.nganSachToiDa),
-                                        color = MaterialTheme.colorScheme.error,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        modifier = Modifier.padding(top = 8.dp)
-                                    )
-                                }
-                            } else {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Chưa thiết lập hạn mức ngân sách",
-                                    fontSize = 11.sp,
-                                    color = Color.Gray
-                                )
                             }
                         }
                     }

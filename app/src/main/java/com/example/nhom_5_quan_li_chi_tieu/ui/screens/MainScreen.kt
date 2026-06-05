@@ -28,7 +28,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nhom_5_quan_li_chi_tieu.data.local.DanhMuc
 import com.example.nhom_5_quan_li_chi_tieu.data.local.GiaoDich
+import com.example.nhom_5_quan_li_chi_tieu.ui.theme.Black
+import com.example.nhom_5_quan_li_chi_tieu.ui.theme.GreenIncome
+import com.example.nhom_5_quan_li_chi_tieu.ui.theme.White
+import com.example.nhom_5_quan_li_chi_tieu.ui.theme.RedExpense
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
+import com.example.nhom_5_quan_li_chi_tieu.viewmodel.DanhMucUiState
+import com.example.nhom_5_quan_li_chi_tieu.viewmodel.GiaoDichUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,14 +45,25 @@ fun MainScreen(
     var soTien by remember { mutableStateOf("") }
     var ghiChu by remember { mutableStateOf("") }
     var isThuNhap by remember { mutableStateOf(false) } // False là Chi tiêu, True là Thu nhập
-    
+
     // Đọc danh mục động từ database
-    val danhSachDanhMuc by viewModel.danhSachDanhMuc.collectAsState()
+    //val danhSachDanhMuc by viewModel.danhSachDanhMuc.collectAsState()
     var danhMucDuocChon by remember { mutableStateOf<DanhMuc?>(null) }
     var editingGiaoDich by remember { mutableStateOf<GiaoDich?>(null) }
     var inputError by remember { mutableStateOf<String?>(null) }
-    val danhSach by viewModel.danhSachGiaoDich.collectAsState()
-
+    //val danhSach by viewModel.danhSachGiaoDich.collectAsState()
+    val giaoDichuiState by viewModel.danhSachGiaoDichState.collectAsState()
+    val danhSachGiaoDich = if (giaoDichuiState is GiaoDichUiState.Success) {
+                (giaoDichuiState as GiaoDichUiState.Success).danhSach //Lấy danh sách ra khỏi hộp
+            }else{
+                emptyList()
+            }
+    val danhMucUiState by viewModel.danhSachDanhMucState.collectAsState()
+    val danhSachDanhMuc = if (danhMucUiState is DanhMucUiState.Success) {
+        (danhMucUiState as DanhMucUiState.Success).danhSach //Lấy danh sách ra khỏi hộp
+    } else {
+        emptyList()
+    }
     // Khởi tạo/Cập nhật danh mục được chọn khi danh sách danh mục load xong
     LaunchedEffect(danhSachDanhMuc) {
         if (danhMucDuocChon == null && danhSachDanhMuc.isNotEmpty()) {
@@ -60,20 +77,18 @@ fun MainScreen(
             danhMucDuocChon = danhSachDanhMuc.firstOrNull { it.loai == (if (isThuNhap) 1 else -1) } ?: danhSachDanhMuc.firstOrNull()
         }
     }
+     val tongThu = danhSachGiaoDich.filter { gd ->
+                val dm = danhSachDanhMuc.find { it.id == gd.idDanhMuc }
+                dm?.loai == 1
+            }.sumOf { it.soTien }
 
-    // 2. Tính toán tổng số dư nhanh hiển thị lên Card dựa trên loại danh mục trong DB
-    val tongThu = danhSach.filter { gd ->
-        val dm = danhSachDanhMuc.find { it.id == gd.idDanhMuc }
-        dm?.loai == 1
-    }.sumOf { it.soTien }
+            val tongChi = danhSachGiaoDich.filter { gd ->
+                val dm = danhSachDanhMuc.find { it.id == gd.idDanhMuc }
+                dm?.loai == -1
+            }.sumOf { it.soTien }
 
-    val tongChi = danhSach.filter { gd ->
-        val dm = danhSachDanhMuc.find { it.id == gd.idDanhMuc }
-        dm?.loai == -1
-    }.sumOf { it.soTien }
-
-    val soDu = tongThu - tongChi
-
+            val soDu = tongThu - tongChi
+  
     Scaffold(
         topBar = {
             Box(
@@ -123,387 +138,516 @@ fun MainScreen(
             }
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            
-            // ================= KHU VỰC 1: gradient card số dư =================
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(8.dp)
+        when (giaoDichuiState) {
+            // TRƯỜNG HỢP A: ĐANG TẢI -> Hiển thị vòng tròn ở giữa màn hình
+            is GiaoDichUiState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                Brush.horizontalGradient(
-                                    colors = listOf(Color(0xFF1B5E20), MaterialTheme.colorScheme.primary)
-                                )
-                            )
-                            .padding(24.dp)
-                            .fillMaxWidth()
-                    ) {
-                        Column {
-                            Text("Tổng Số Dư Khả Dụng", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = String.format("%,.0f VNĐ", soDu),
-                                color = Color.White,
-                                fontSize = 30.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            
-                            Spacer(modifier = Modifier.height(20.dp))
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column {
-                                    Text("Tổng Thu (▲)", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = String.format("%,.0f đ", tongThu),
-                                        color = Color(0xFF81C784),
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text("Tổng Chi (▼)", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = String.format("%,.0f đ", tongChi),
-                                        color = Color(0xFFFF8A80),
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
-
-            // ================= KHU VỰC 2: form nhập giao dịch =================
-            item {
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+            // TRƯỜNG HỢP B: BỊ LỖI -> Hiển thị chữ báo lỗi màu đỏ
+            is GiaoDichUiState.Error -> {
+                val thongBaoLoi = (giaoDichuiState as GiaoDichUiState.Error).thongBaoLoi
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues), // ← THÊM DÒNG NÀY để tránh bị TopBar che
+                    contentAlignment = Alignment.Center // ← Hiện ra GIỮA màn hình
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Nhập Khoản Giao Dịch Mới", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-
-                        // 2.1 Chọn Loại giao dịch (Thu / Chi) dạng Segmented Toggle
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
-                                .padding(4.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(
-                                        if (!isThuNhap) MaterialTheme.colorScheme.error else Color.Transparent,
-                                        RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { isThuNhap = false }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Khoản Chi (▼)",
-                                    color = if (!isThuNhap) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(
-                                        if (isThuNhap) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                        RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { isThuNhap = true }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Khoản Thu (▲)",
-                                    color = if (isThuNhap) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-
-                        // 2.2 Nhập Số tiền & Ghi chú
-                        OutlinedTextField(
-                            value = soTien,
-                            onValueChange = { 
-                                soTien = it
-                                inputError = null 
-                            },
-                            label = { Text("Nhập số tiền (VNĐ)") },
-                            prefix = { Text("đ ") },
-                            isError = inputError != null,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Number
-                            )
-                        )
-                        if (inputError != null) {
-                            Text(inputError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                        }
-
-                        // Khắc phục lỗi gõ tiếng Việt bằng KeyboardOptions và maxLines = 1
-                        OutlinedTextField(
-                            value = ghiChu,
-                            onValueChange = { ghiChu = it },
-                            label = { Text("Ghi chú chi tiết") },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 1,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                capitalization = KeyboardCapitalization.Sentences
-                            )
-                        )
-
-                        // 2.3 Chọn nhanh Danh mục từ DB bằng Chips (Cuộn Ngang)
-                        Text("Chọn Danh Mục:", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        if (danhSachDanhMuc.isEmpty()) {
-                            Text("Đang tải danh mục...", color = Color.Gray, fontSize = 13.sp)
-                        } else {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                items(danhSachDanhMuc.filter { it.loai == (if (isThuNhap) 1 else -1) }) { dm ->
-                                    FilterChip(
-                                        selected = danhMucDuocChon?.id == dm.id,
-                                        onClick = { danhMucDuocChon = dm },
-                                        label = { Text("${dm.bieuTuong} ${dm.tenDanhMuc}") },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    )
-                                }
-                            }
-                        }
-
-                        // 2.4 Cảnh báo ngân sách tức thời
-                        if (!isThuNhap && danhMucDuocChon != null) {
-                            val tongTienDaChiCungDanhMuc = danhSach
-                                .filter { it.idDanhMuc == danhMucDuocChon!!.id }
-                                .sumOf { it.soTien }
-                            val soTienSapGhi = soTien.toDoubleOrNull() ?: 0.0
-                            
-                            if (tongTienDaChiCungDanhMuc + soTienSapGhi > danhMucDuocChon!!.nganSachToiDa) {
-                                Card(
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = "⚠️ Vượt ngân sách! Danh mục [${danhMucDuocChon!!.tenDanhMuc}] hạn mức là ${String.format("%,.0fđ", danhMucDuocChon!!.nganSachToiDa)}. Bạn đã tiêu ${String.format("%,.0fđ", tongTienDaChiCungDanhMuc)}.",
-                                        color = MaterialTheme.colorScheme.tertiary,
-                                        modifier = Modifier.padding(8.dp),
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-                        }
-
-                        // 2.5 Nút lưu / Cập nhật
-                        if (editingGiaoDich == null) {
-                            Button(
-                                onClick = {
-                                    val parseSoTien = soTien.toDoubleOrNull()
-                                    if (parseSoTien == null || parseSoTien <= 0) {
-                                        inputError = "Vui lòng nhập số tiền lớn hơn 0"
-                                    } else if (ghiChu.isBlank()) {
-                                        inputError = "Vui lòng nhập ghi chú"
-                                    } else if (danhMucDuocChon == null) {
-                                        inputError = "Vui lòng chọn hoặc thêm danh mục"
-                                    } else {
-                                        viewModel.luuGiaoDich(parseSoTien, ghiChu, danhMucDuocChon!!.id)
-                                        soTien = ""
-                                        ghiChu = ""
-                                        inputError = null
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                shape = MaterialTheme.shapes.medium
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = "Save")
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Lưu Giao Dịch", fontWeight = FontWeight.Bold)
-                            }
-                        } else {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = { 
-                                        editingGiaoDich = null
-                                        soTien = ""
-                                        ghiChu = ""
-                                        inputError = null
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    shape = MaterialTheme.shapes.medium
-                                ) {
-                                    Text("Hủy")
-                                }
-                                Button(
-                                    onClick = {
-                                        val parseSoTien = soTien.toDoubleOrNull()
-                                        if (parseSoTien == null || parseSoTien <= 0) {
-                                            inputError = "Vui lòng nhập số tiền hợp lệ"
-                                        } else if (ghiChu.isBlank()) {
-                                            inputError = "Vui lòng nhập ghi chú"
-                                        } else if (danhMucDuocChon == null) {
-                                            inputError = "Vui lòng chọn danh mục"
-                                        } else {
-                                            // Tạo bản sao của giao dịch đang sửa và nạp dữ liệu mới vào
-                                            val updatedGd = editingGiaoDich!!.copy(
-                                                soTien = parseSoTien,
-                                                ghiChu = ghiChu,
-                                                idDanhMuc = danhMucDuocChon!!.id
-                                            )
-                                            viewModel.suaGiaoDich(updatedGd)
-                                            
-                                            // Reset form về trạng thái Thêm Mới
-                                            editingGiaoDich = null
-                                            soTien = ""
-                                            ghiChu = ""
-                                            inputError = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary), // Màu cam
-                                    shape = MaterialTheme.shapes.medium
-                                ) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Update")
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Cập Nhật", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ================= KHU VỰC 3: danh sách giao dịch gần đây =================
-            item {
-                Text(
-                    text = "Lịch Sử Giao Dịch Gần Đây",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (danhSach.isEmpty()) {
-                item {
                     Text(
-                        "Chưa có giao dịch nào được lưu. Hãy nhập khoản chi đầu tiên!",
-                        color = Color.Gray,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        text = "⚠️ Lỗi: $thongBaoLoi",
+                        color = Color.Red,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-            } else {
-                items(danhSach) { gd ->
-                    val dm = danhSachDanhMuc.find { it.id == gd.idDanhMuc } ?: DanhMuc(id = 99, tenDanhMuc = "Khác", bieuTuong = "🏷️", loai = -1, nganSachToiDa = 0.0)
-                    val isIncome = dm.loai == 1
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .padding(12.dp)
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+            }
+            // TRƯỜNG HỢP C: DỮ LIỆU ĐÃ TẢI XONG -> Hiển thị LazyColumn như cũ
+            is GiaoDichUiState.Success -> {
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+
+                    // ================= KHU VỰC 1: gradient card số dư =================
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            elevation = CardDefaults.cardElevation(8.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(
-                                            if (isIncome) Color(0xFFE8F5E9) else Color(0xFFFFEBEE),
-                                            RoundedCornerShape(10.dp)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(dm.bieuTuong, fontSize = 20.sp)
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = dm.tenDanhMuc, 
-                                        fontWeight = FontWeight.Bold, 
-                                        fontSize = 15.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            colors = listOf(
+                                                Color(0xFF1B5E20),
+                                                MaterialTheme.colorScheme.primary
+                                            )
+                                        )
                                     )
+                                    .padding(24.dp)
+                                    .fillMaxWidth()
+                            ) {
+                                Column {
                                     Text(
-                                        text = gd.ghiChu, 
-                                        color = Color.Gray, 
-                                        fontSize = 12.sp,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
+                                        "Tổng Số Dư Khả Dụng",
+                                        color = Color.White.copy(alpha = 0.8f),
+                                        fontSize = 13.sp
                                     )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = String.format("%,.0f VNĐ", soDu),
+                                        color = Color.White,
+                                        fontSize = 30.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(20.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column {
+                                            Text(
+                                                "Tổng Thu (▲)",
+                                                color = Color.White.copy(alpha = 0.7f),
+                                                fontSize = 11.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = String.format("%,.0f đ", tongThu),
+                                                color = Color(0xFF81C784),
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                "Tổng Chi (▼)",
+                                                color = Color.White.copy(alpha = 0.7f),
+                                                fontSize = 11.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = String.format("%,.0f đ", tongChi),
+                                                color = Color(0xFFFF8A80),
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
                                 }
                             }
-                            
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
+                        }
+                    }
+
+                    // ================= KHU VỰC 2: form nhập giao dịch =================
+                    item {
+                        ElevatedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Text(
-                                    text = (if (isIncome) "+" else "-") + String.format("%,.0fđ", gd.soTien),
-                                    color = if (isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
+                                    "Nhập Khoản Giao Dịch Mới",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                IconButton(
-                                    onClick = { 
-                                        // Điền ngược dữ liệu lên form nhập liệu ở trên cùng
-                                        editingGiaoDich = gd
-                                        soTien = gd.soTien.toLong().toString() // Ép sang Long để bỏ số .0 (ví dụ 30000.0 -> 30000)
-                                        ghiChu = gd.ghiChu
-                                        isThuNhap = isIncome
-                                        danhMucDuocChon = dm
-                                        inputError = null
-                                    }
+
+                                // 2.1 Chọn Loại giao dịch (Thu / Chi) dạng Segmented Toggle
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                            MaterialTheme.shapes.medium
+                                        )
+                                        .padding(4.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "Sửa giao dịch",
-                                        tint = MaterialTheme.colorScheme.error
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .background(
+                                                if (!isThuNhap) MaterialTheme.colorScheme.error else Color.Transparent,
+                                                RoundedCornerShape(10.dp)
+                                            )
+                                            .clickable { isThuNhap = false }
+                                            .padding(vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "Khoản Chi (▼)",
+                                            color = if (!isThuNhap) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .background(
+                                                if (isThuNhap) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                                RoundedCornerShape(10.dp)
+                                            )
+                                            .clickable { isThuNhap = true }
+                                            .padding(vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "Khoản Thu (▲)",
+                                            color = if (isThuNhap) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                }
+
+                                // 2.2 Nhập Số tiền & Ghi chú
+                                OutlinedTextField(
+                                    value = soTien,
+                                    onValueChange = {
+                                        soTien = it
+                                        inputError = null
+                                    },
+                                    label = { Text("Nhập số tiền (VNĐ)") },
+                                    prefix = { Text("đ ") },
+                                    isError = inputError != null,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Number
+                                    )
+                                )
+                                if (inputError != null) {
+                                    Text(
+                                        inputError!!,
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
                                     )
                                 }
-                                IconButton(
-                                    onClick = { viewModel.xoaGiaoDich(gd) }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Xóa giao dịch",
-                                        tint = MaterialTheme.colorScheme.error
+
+                                // Khắc phục lỗi gõ tiếng Việt bằng KeyboardOptions và maxLines = 1
+                                OutlinedTextField(
+                                    value = ghiChu,
+                                    onValueChange = { ghiChu = it },
+                                    label = { Text("Ghi chú chi tiết") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    maxLines = 1,
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Text,
+                                        capitalization = KeyboardCapitalization.Sentences
                                     )
+                                )
+
+                                // 2.3 Chọn nhanh Danh mục từ DB bằng Chips (Cuộn Ngang)
+                                Text(
+                                    "Chọn Danh Mục:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                if (danhSachDanhMuc.isEmpty()) {
+                                    Text(
+                                        "Đang tải danh mục...",
+                                        color = Color.Gray,
+                                        fontSize = 13.sp
+                                    )
+                                } else {
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        items(danhSachDanhMuc.filter { it.loai == (if (isThuNhap) 1 else -1) }) { dm ->
+                                            FilterChip(
+                                                selected = danhMucDuocChon?.id == dm.id,
+                                                onClick = { danhMucDuocChon = dm },
+                                                label = { Text("${dm.bieuTuong} ${dm.tenDanhMuc}") },
+                                                colors = FilterChipDefaults.filterChipColors(
+                                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // 2.4 Cảnh báo ngân sách tức thời
+                                if (!isThuNhap && danhMucDuocChon != null) {
+                                    val tongTienDaChiCungDanhMuc = danhSachGiaoDich
+                                        .filter { it.idDanhMuc == danhMucDuocChon!!.id }
+                                        .sumOf { it.soTien }
+                                    val soTienSapGhi = soTien.toDoubleOrNull() ?: 0.0
+
+                                    if (tongTienDaChiCungDanhMuc + soTienSapGhi > danhMucDuocChon!!.nganSachToiDa) {
+                                        Card(
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = Color(
+                                                    0xFFFFF3E0
+                                                )
+                                            ),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                text = "⚠️ Vượt ngân sách! Danh mục [${danhMucDuocChon!!.tenDanhMuc}] hạn mức là ${
+                                                    String.format(
+                                                        "%,.0fđ",
+                                                        danhMucDuocChon!!.nganSachToiDa
+                                                    )
+                                                }. Bạn đã tiêu ${
+                                                    String.format(
+                                                        "%,.0fđ",
+                                                        tongTienDaChiCungDanhMuc
+                                                    )
+                                                }.",
+                                                color = MaterialTheme.colorScheme.tertiary,
+                                                modifier = Modifier.padding(8.dp),
+                                                fontSize = 12.sp
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // 2.5 Nút lưu / Cập nhật
+                                if (editingGiaoDich == null) {
+                                    Button(
+                                        onClick = {
+                                            val parseSoTien = soTien.toDoubleOrNull()
+                                            if (parseSoTien == null || parseSoTien <= 0) {
+                                                inputError = "Vui lòng nhập số tiền lớn hơn 0"
+                                            } else if (ghiChu.isBlank()) {
+                                                inputError = "Vui lòng nhập ghi chú"
+                                            } else if (danhMucDuocChon == null) {
+                                                inputError = "Vui lòng chọn hoặc thêm danh mục"
+                                            } else {
+                                                viewModel.luuGiaoDich(
+                                                    parseSoTien,
+                                                    ghiChu,
+                                                    danhMucDuocChon!!.id
+                                                )
+                                                soTien = ""
+                                                ghiChu = ""
+                                                inputError = null
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                        shape = MaterialTheme.shapes.medium
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Save")
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Lưu Giao Dịch", fontWeight = FontWeight.Bold)
+                                    }
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                editingGiaoDich = null
+                                                soTien = ""
+                                                ghiChu = ""
+                                                inputError = null
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = MaterialTheme.shapes.medium
+                                        ) {
+                                            Text("Hủy")
+                                        }
+                                        Button(
+                                            onClick = {
+                                                val parseSoTien = soTien.toDoubleOrNull()
+                                                if (parseSoTien == null || parseSoTien <= 0) {
+                                                    inputError = "Vui lòng nhập số tiền hợp lệ"
+                                                } else if (ghiChu.isBlank()) {
+                                                    inputError = "Vui lòng nhập ghi chú"
+                                                } else if (danhMucDuocChon == null) {
+                                                    inputError = "Vui lòng chọn danh mục"
+                                                } else {
+                                                    // Tạo bản sao của giao dịch đang sửa và nạp dữ liệu mới vào
+                                                    val updatedGd = editingGiaoDich!!.copy(
+                                                        soTien = parseSoTien,
+                                                        ghiChu = ghiChu,
+                                                        idDanhMuc = danhMucDuocChon!!.id
+                                                    )
+                                                    viewModel.suaGiaoDich(updatedGd)
+
+                                                    // Reset form về trạng thái Thêm Mới
+                                                    editingGiaoDich = null
+                                                    soTien = ""
+                                                    ghiChu = ""
+                                                    inputError = null
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary), // Màu cam
+                                            shape = MaterialTheme.shapes.medium
+                                        ) {
+                                            Icon(Icons.Default.Edit, contentDescription = "Update")
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Cập Nhật", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ================= KHU VỰC 3: danh sách giao dịch gần đây =================
+                    item {
+                        Text(
+                            text = "Lịch Sử Giao Dịch Gần Đây",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (danhSachGiaoDich.isEmpty()) {
+                        item {
+                            Text(
+                                "Chưa có giao dịch nào được lưu. Hãy nhập khoản chi đầu tiên!",
+                                color = Color.Gray,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                    } else {
+                        items(danhSachGiaoDich) { gd ->
+                            val dm = danhSachDanhMuc.find { it.id == gd.idDanhMuc } ?: DanhMuc(id = 99, tenDanhMuc = "Khác", bieuTuong = "🏷️", loai = -1, nganSachToiDa = 0.0)
+                            val isIncome = dm.loai == 1
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(containerColor = GreenIncome)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .padding(12.dp)
+                                        .fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                // 1. Ô ICON
+                                    Box(
+                                        modifier = Modifier
+                                            .size(70.dp)
+                                            .background(White, RoundedCornerShape(12.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(dm.bieuTuong, fontSize = 30.sp)
+                                    }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                // 2. CỘT GIỮA (Tên, Số tiền, Ghi chú)
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(modifier = Modifier.fillMaxWidth()) {
+                                // Ô Tên Danh Mục
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .height(40.dp)
+                                                    .background(White, RoundedCornerShape(8.dp))
+                                                    .padding(horizontal = 8.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = dm.tenDanhMuc,
+                                                    color = Color.DarkGray,
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                    // Ô Số Tiền
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .height(40.dp)
+                                                    .background(White, RoundedCornerShape(8.dp))
+                                                    .padding(horizontal = 8.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = (if (isIncome) "+" else "-") + String.format("%,.0fđ", gd.soTien),
+                                                    color = if (isIncome) GreenIncome else RedExpense,
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Ô Ghi Chú (Hàng dưới)
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(40.dp)
+                                                .background(White, RoundedCornerShape(8.dp))
+                                                .padding(horizontal = 12.dp),
+                                            contentAlignment = Alignment.CenterStart
+                                        ) {
+                                            Text(
+                                                text = gd.ghiChu,
+                                                fontSize = 8.sp,
+                                                color = Color.DarkGray,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    // 3. CỘT NÚT BẤM (Xóa, Sửa)
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    // Nút Xóa
+                                        Box(
+                                            modifier = Modifier
+                                                .size(width = 60.dp, height = 40.dp)
+                                                .background(White, RoundedCornerShape(8.dp))
+                                                .clickable { viewModel.xoaGiaoDich(gd) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("Xóa", color = RedExpense, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        // Nút Sửa
+                                        Box(
+                                            modifier = Modifier
+                                                .size(width = 60.dp, height = 40.dp)
+                                                .background(White, RoundedCornerShape(8.dp))
+                                                .clickable {
+                                                    editingGiaoDich = gd
+                                                    soTien = gd.soTien.toLong().toString()
+                                                    ghiChu = gd.ghiChu
+                                                    isThuNhap = isIncome
+                                                    danhMucDuocChon = dm
+                                                    inputError = null
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("Sửa", color = GreenIncome, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            else->{}
         }
     }
 }
