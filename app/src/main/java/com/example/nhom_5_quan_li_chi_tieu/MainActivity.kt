@@ -14,6 +14,8 @@ import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PieChart
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -34,9 +36,11 @@ import com.example.nhom_5_quan_li_chi_tieu.ui.screens.GioiThieuScreen
 import com.example.nhom_5_quan_li_chi_tieu.ui.screens.MainScreen
 import com.example.nhom_5_quan_li_chi_tieu.ui.screens.SplashScreen
 import com.example.nhom_5_quan_li_chi_tieu.ui.screens.ThongKeScreen
+import com.example.nhom_5_quan_li_chi_tieu.ui.screens.TintucScreen
 import com.example.nhom_5_quan_li_chi_tieu.repository.BudgetRepository
 import com.example.nhom_5_quan_li_chi_tieu.ui.theme.BudgetBuddyTheme
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
+import com.example.nhom_5_quan_li_chi_tieu.viewmodel.TintucViewModel
 import com.example.nhom_5_quan_li_chi_tieu.data.local.SettingsDataStore
 import com.example.nhom_5_quan_li_chi_tieu.repository.SettingsRepository
 data class NavigationItem(
@@ -62,6 +66,7 @@ class MainActivity : ComponentActivity() {
 
         // 3. Khởi tạo ViewModel lấy từ tầng VIEWMODEL
         val viewModel = BudgetViewModel(repositoryBudget, repositorySetting)
+        val tintucViewModel = TintucViewModel()
 
 
 
@@ -76,6 +81,7 @@ class MainActivity : ComponentActivity() {
                         NavigationItem("main", "Trang Chủ", Icons.Filled.Home, Icons.Outlined.Home),
                         NavigationItem("thongke", "Thống Kê", Icons.Filled.PieChart, Icons.Outlined.PieChart),
                         NavigationItem("danhmuc", "Danh Mục", Icons.Filled.Category, Icons.Outlined.Category),
+                        NavigationItem("tintuc", "Tin Tức", Icons.Filled.Article, Icons.Outlined.Article),
                         NavigationItem("about", "Cài đặt", Icons.Filled.Info, Icons.Outlined.Info)
                     )
 
@@ -143,6 +149,9 @@ class MainActivity : ComponentActivity() {
                             }
                             composable("about") {
                                 GioiThieuScreen(viewModel = viewModel)
+                            }
+                            composable("tintuc") {
+                                TintucScreen(viewModel = tintucViewModel)
                             }
                         }
                     }
