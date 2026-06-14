@@ -18,8 +18,25 @@ interface GiaoDichDao {
     @Delete
     suspend fun xoaGiaoDich(giaoDich: GiaoDich)
 
+    @Query("DELETE FROM bang_giao_dich WHERE idDanhMuc = :idDanhMuc")
+    suspend fun xoaGiaoDichTheoDanhMuc(idDanhMuc: Int)
+
     @Query("SELECT * FROM bang_giao_dich ORDER BY ngayGiaoDich DESC")
     fun layLichSuGiaoDich(): Flow<List<GiaoDich>>
+
+    // --- CÁC HÀM HỖ TRỢ XUẤT NHẬP DỮ LIỆU (JSON) ---
+    @Query("SELECT * FROM bang_giao_dich")
+    suspend fun layTatCaGiaoDichNhanh(): List<GiaoDich>
+
+    @Query("DELETE FROM bang_giao_dich")
+    suspend fun xoaToanBoGiaoDich()
+
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun themNhieuGiaoDich(danhSach: List<GiaoDich>)
+
+    @Query("SELECT * FROM bang_giao_dich WHERE ngayGiaoDich BETWEEN :ngayBatDau AND :ngayKetThuc ORDER BY ngayGiaoDich DESC")
+    fun layLichSuGiaoDichTheoThang(ngayBatDau: Long, ngayKetThuc: Long): Flow<List<GiaoDich>>
+
 
     // Lệnh tính tổng chi theo danh mục (Cảnh báo vượt ngân sách)
     @Query("""

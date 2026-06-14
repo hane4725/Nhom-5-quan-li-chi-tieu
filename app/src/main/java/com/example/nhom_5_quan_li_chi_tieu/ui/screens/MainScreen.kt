@@ -35,6 +35,14 @@ import com.example.nhom_5_quan_li_chi_tieu.ui.theme.RedExpense
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.DanhMucUiState
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.GiaoDichUiState
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,15 +50,16 @@ fun MainScreen(
     viewModel: BudgetViewModel
 ) {
     // 1. Quản lý trạng thái nhập liệu & chọn danh mục
-    var soTien by remember { mutableStateOf("") }
-    var ghiChu by remember { mutableStateOf("") }
-    var isThuNhap by remember { mutableStateOf(false) } // False là Chi tiêu, True là Thu nhập
+    var soTien by rememberSaveable { mutableStateOf("") }
+    var ghiChu by rememberSaveable { mutableStateOf("") }
+    var isThuNhap by rememberSaveable { mutableStateOf(false) } // False là Chi tiêu, True là Thu nhập
 
     // Đọc danh mục động từ database
     //val danhSachDanhMuc by viewModel.danhSachDanhMuc.collectAsState()
     var danhMucDuocChon by remember { mutableStateOf<DanhMuc?>(null) }
     var editingGiaoDich by remember { mutableStateOf<GiaoDich?>(null) }
-    var inputError by remember { mutableStateOf<String?>(null) }
+    var giaoDichDangXoa by remember { mutableStateOf<GiaoDich?>(null) }
+    var inputError by rememberSaveable { mutableStateOf<String?>(null) }
     //val danhSach by viewModel.danhSachGiaoDich.collectAsState()
     val giaoDichuiState by viewModel.danhSachGiaoDichState.collectAsState()
     val danhSachGiaoDich = if (giaoDichuiState is GiaoDichUiState.Success) {
@@ -58,6 +67,10 @@ fun MainScreen(
             }else{
                 emptyList()
             }
+    
+    // Trạng thái cuộn của danh sách và Coroutine để kích hoạt cuộn
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     val danhMucUiState by viewModel.danhSachDanhMucState.collectAsState()
     val danhSachDanhMuc = if (danhMucUiState is DanhMucUiState.Success) {
         (danhMucUiState as DanhMucUiState.Success).danhSach //Lấy danh sách ra khỏi hộp
@@ -168,12 +181,65 @@ fun MainScreen(
             is GiaoDichUiState.Success -> {
 
                 LazyColumn(
+                    state = listState, // Gắn state để có thể điều khiển cuộn
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                     // ================= KHU VỰC 0: Bộ lọc tháng =================
+                    item {
+                        val thangDuocChon by viewModel.thangDuocChon.collectAsState()
+                        
+                        // Lấy chuỗi định dạng
+                        val chuoiThang = if (thangDuocChon == null) {
+                            "Tất cả lịch sử"
+                        } else {
+                            val sdf = java.text.SimpleDateFormat("MM/yyyy", java.util.Locale.getDefault())
+                            "Tháng " + sdf.format(thangDuocChon!!.time)
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Nút Lùi
+                            IconButton(
+                                onClick = { viewModel.chuyenThang(true) },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
+                            ) {
+                                Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Tháng trước", tint = MaterialTheme.colorScheme.primary)
+                            }
+                            
+                            // Nút hiển thị / Chọn Tất cả
+                            TextButton(onClick = { 
+                                if (thangDuocChon == null) {
+                                    // Chuyển null về tháng hiện tại
+                                    viewModel.chuyenThang(false) 
+                                } else {
+                                    viewModel.xemTatCa()
+                                }
+                            }) {
+                                Text(
+                                    text = chuoiThang,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            // Nút Tiến
+                            IconButton(
+                                onClick = { viewModel.chuyenThang(false) },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
+                            ) {
+                                Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Tháng sau", tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+
 
                     // ================= KHU VỰC 1: gradient card số dư =================
                     item {
@@ -343,7 +409,8 @@ fun MainScreen(
                                     onValueChange = { ghiChu = it },
                                     label = { Text("Ghi chú chi tiết") },
                                     modifier = Modifier.fillMaxWidth(),
-                                    maxLines = 1,
+                                    minLines = 3, // Giúp ô nhập liệu phình to ra sẵn (hiển thị 3 dòng)
+                                    maxLines = 5, // Cho phép xuống tối đa 5 dòng, gõ thêm nữa thì sẽ có thanh cuộn dọc
                                     keyboardOptions = KeyboardOptions(
                                         keyboardType = KeyboardType.Text,
                                         capitalization = KeyboardCapitalization.Sentences
@@ -590,21 +657,22 @@ fun MainScreen(
 
                                         Spacer(modifier = Modifier.height(8.dp))
 
-                                    // Ô Ghi Chú (Hàng dưới)
+                                        // Ô Ghi Chú (Hàng dưới)
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .height(40.dp)
                                                 .background(White, RoundedCornerShape(8.dp))
-                                                .padding(horizontal = 12.dp),
-                                            contentAlignment = Alignment.CenterStart
+                                                .padding(horizontal = 12.dp, vertical = 8.dp), // Thêm padding dọc cho đẹp
+                                            contentAlignment = Alignment.TopStart // Đẩy chữ lên góc trên
                                         ) {
                                             Text(
                                                 text = gd.ghiChu,
-                                                fontSize = 8.sp,
+                                                fontSize = 13.sp, // Phóng to chữ lên
                                                 color = Color.DarkGray,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                lineHeight = 18.sp // Tạo khoảng cách giữa 2 dòng nếu có
                                             )
                                         }
                                     }
@@ -618,7 +686,7 @@ fun MainScreen(
                                             modifier = Modifier
                                                 .size(width = 60.dp, height = 40.dp)
                                                 .background(White, RoundedCornerShape(8.dp))
-                                                .clickable { viewModel.xoaGiaoDich(gd) },
+                                                .clickable { giaoDichDangXoa = gd },
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text("Xóa", color = RedExpense, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -635,6 +703,10 @@ fun MainScreen(
                                                     isThuNhap = isIncome
                                                     danhMucDuocChon = dm
                                                     inputError = null
+                                                    // Cuộn ngược lên form nhập liệu (vị trí số 2)
+                                                    coroutineScope.launch {
+                                                        listState.animateScrollToItem(2)
+                                                    }
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -649,5 +721,41 @@ fun MainScreen(
             }
             else->{}
         }
+    }
+
+    // ================= DIALOG CẢNH BÁO XÓA GIAO DỊCH =================
+    if (giaoDichDangXoa != null) {
+        AlertDialog(
+            onDismissRequest = { giaoDichDangXoa = null },
+            title = { 
+                Text(
+                    text = "Xác nhận xóa giao dịch", 
+                    fontWeight = FontWeight.Bold, 
+                    color = MaterialTheme.colorScheme.error
+                ) 
+            },
+            text = { 
+                Text(
+                    text = "Bạn có chắc chắn muốn xóa giao dịch [${giaoDichDangXoa!!.ghiChu}] với số tiền ${String.format("%,.0fđ", giaoDichDangXoa!!.soTien)} không?",
+                    lineHeight = 20.sp
+                ) 
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.xoaGiaoDich(giaoDichDangXoa!!)
+                        giaoDichDangXoa = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Xóa Ngay")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { giaoDichDangXoa = null }) {
+                    Text("Hủy Bỏ")
+                }
+            }
+        )
     }
 }

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.runtime.saveable.rememberSaveable
 
 import com.example.nhom_5_quan_li_chi_tieu.data.local.DanhMuc
 import com.example.nhom_5_quan_li_chi_tieu.viewmodel.BudgetViewModel
@@ -38,17 +39,20 @@ fun DanhMucScreen(
 
 
     // Trạng thái cho Dialog sửa ngân sách
-    var showEditDialog by remember { mutableStateOf(false) }
+    var showEditDialog by rememberSaveable { mutableStateOf(false) }
     var danhMucDangSua by remember { mutableStateOf<DanhMuc?>(null) }
-    var nganSachMoiText by remember { mutableStateOf("") }
-    var dialogError by remember { mutableStateOf<String?>(null) }
+    var nganSachMoiText by rememberSaveable { mutableStateOf("") }
+    var dialogError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // Trạng thái cho cảnh báo Xóa danh mục
+    var danhMucDangXoa by remember { mutableStateOf<DanhMuc?>(null) }
 
     // Trạng thái cho Form thêm danh mục mới
-    var tenDanhMuc by remember { mutableStateOf("") }
-    var bieuTuong by remember { mutableStateOf("") }
-    var isThuNhap by remember { mutableStateOf(false) }
-    var nganSachToiDa by remember { mutableStateOf("") }
-    var formError by remember { mutableStateOf<String?>(null) }
+    var tenDanhMuc by rememberSaveable { mutableStateOf("") }
+    var bieuTuong by rememberSaveable { mutableStateOf("") }
+    var isThuNhap by rememberSaveable { mutableStateOf(false) }
+    var nganSachToiDa by rememberSaveable { mutableStateOf("") }
+    var formError by rememberSaveable { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -170,7 +174,7 @@ fun DanhMucScreen(
                                 onValueChange = { tenDanhMuc = it },
                                 label = { Text("Tên danh mục") },
                                 modifier = Modifier.weight(2.8f),
-                                maxLines = 1,
+                                singleLine = true, // Dùng singleLine để chữ tự trượt ngang, không bị biến mất
                                 keyboardOptions = KeyboardOptions(
                                     keyboardType = KeyboardType.Text,
                                     capitalization = KeyboardCapitalization.Sentences
@@ -355,7 +359,7 @@ fun DanhMucScreen(
                                 }
 
                                 IconButton(
-                                    onClick = { viewModel.xoaDanhMuc(dm) }
+                                    onClick = { danhMucDangXoa = dm }
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
@@ -416,12 +420,48 @@ fun DanhMucScreen(
                         }
                     }
                 ) {
-                    Text("Lưu lại")
+                    Text("Lưu Lại")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
-                    Text("Hủy bỏ")
+                    Text("Hủy")
+                }
+            }
+        )
+    }
+
+    // ================= PHẦN 4: DIALOG CẢNH BÁO XÓA DANH MỤC =================
+    if (danhMucDangXoa != null) {
+        AlertDialog(
+            onDismissRequest = { danhMucDangXoa = null },
+            title = { 
+                Text(
+                    text = "Xác nhận xóa danh mục", 
+                    fontWeight = FontWeight.Bold, 
+                    color = MaterialTheme.colorScheme.error
+                ) 
+            },
+            text = { 
+                Text(
+                    text = "Bạn có chắc chắn muốn xóa danh mục [${danhMucDangXoa!!.tenDanhMuc}] không?\n\nCảnh báo: Hành động này sẽ XÓA VĨNH VIỄN toàn bộ giao dịch đang thuộc về danh mục này!",
+                    lineHeight = 20.sp
+                ) 
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.xoaDanhMuc(danhMucDangXoa!!)
+                        danhMucDangXoa = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Xóa Ngay")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { danhMucDangXoa = null }) {
+                    Text("Hủy Bỏ")
                 }
             }
         )

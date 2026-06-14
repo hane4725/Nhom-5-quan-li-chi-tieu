@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    id("com.google.gms.google-services") // <-- THÊM DÒNG NÀY FIREBASE
 }
 
 android {
@@ -72,4 +73,9 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:$retrofit_version")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // Khai báo Firebase BoM (Đảm bảo các bản cập nhật của Firebase tương thích nhau)
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+
+    // Khai báo Firebase Cloud Firestore (Dùng để lưu Database)
+    implementation("com.google.firebase:firebase-firestore")
 }

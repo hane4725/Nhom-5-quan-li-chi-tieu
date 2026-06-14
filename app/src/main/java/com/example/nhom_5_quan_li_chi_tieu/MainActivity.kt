@@ -53,7 +53,7 @@ data class NavigationItem(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("BTL_Lifecycle", "0. onCreate: Khởi tạo ứng dụng")
+        Log.d("BudgetBuddy_Lifecycle", "onCreate: Khởi tạo ứng dụng")
         // 1. Khởi tạo Room Database lấy từ tầng DATA (Local)
         val db = BudgetDatabase.getDatabase(this)
         val giaoDichDao = db.giaoDichDao()
@@ -74,114 +74,138 @@ class MainActivity : ComponentActivity() {
             val isDarkMode by viewModel.isDarkMode.collectAsState()
             BudgetBuddyTheme(isDarkMode) {
                 val navController = rememberNavController()
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentRoute = navBackStackEntry?.destination?.route
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
 
-                    val items = listOf(
-                        NavigationItem("main", "Trang Chủ", Icons.Filled.Home, Icons.Outlined.Home),
-                        NavigationItem("thongke", "Thống Kê", Icons.Filled.PieChart, Icons.Outlined.PieChart),
-                        NavigationItem("danhmuc", "Danh Mục", Icons.Filled.Category, Icons.Outlined.Category),
-                        NavigationItem("tintuc", "Tin Tức", Icons.Filled.Article, Icons.Outlined.Article),
-                        NavigationItem("about", "Cài đặt", Icons.Filled.Info, Icons.Outlined.Info)
-                    )
+                val items = listOf(
+                    NavigationItem("main", "Trang Chủ", Icons.Filled.Home, Icons.Outlined.Home),
+                    NavigationItem(
+                        "thongke",
+                        "Thống Kê",
+                        Icons.Filled.PieChart,
+                        Icons.Outlined.PieChart
+                    ),
+                    NavigationItem(
+                        "danhmuc",
+                        "Danh Mục",
+                        Icons.Filled.Category,
+                        Icons.Outlined.Category
+                    ),
+                    NavigationItem(
+                        "tintuc",
+                        "Tin Tức",
+                        Icons.Filled.Article,
+                        Icons.Outlined.Article
+                    ),
+                    NavigationItem("about", "Cài đặt", Icons.Filled.Info, Icons.Outlined.Info)
+                )
 
-                    // Ẩn thanh điều hướng khi đang ở màn hình chờ (Splash)
-                    val showBottomBar = currentRoute != "splash"
+                // Ẩn thanh điều hướng khi đang ở màn hình chờ (Splash)
+                val showBottomBar = currentRoute != "splash"
 
-                    Scaffold(
-                        bottomBar = {
-                            if (showBottomBar) {
-                                NavigationBar(
+                Scaffold(
+                    bottomBar = {
+                        if (showBottomBar) {
+                            NavigationBar(
 
-                                    tonalElevation = 8.dp
-                                ) {
-                                    items.forEach { item ->
-                                        val isSelected = currentRoute == item.route
-                                        NavigationBarItem(
-                                            selected = isSelected,
-                                            onClick = {
-                                                if (currentRoute != item.route) {
-                                                    navController.navigate(item.route) {
-                                                        popUpTo(navController.graph.startDestinationId) {
-                                                            saveState = true
-                                                        }
-                                                        launchSingleTop = true
-                                                        restoreState = true
+                                tonalElevation = 8.dp
+                            ) {
+                                items.forEach { item ->
+                                    val isSelected = currentRoute == item.route
+                                    NavigationBarItem(
+                                        selected = isSelected,
+                                        onClick = {
+                                            if (currentRoute != item.route) {
+                                                navController.navigate(item.route) {
+                                                    popUpTo(navController.graph.startDestinationId) {
+                                                        saveState = true
                                                     }
+                                                    launchSingleTop = true
+                                                    restoreState = true
                                                 }
-                                            },
-                                            icon = {
-                                                Icon(
-                                                    imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                                                    contentDescription = item.title
-                                                )
-                                            },
-                                            label = { Text(item.title, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) }
-                                        )
-                                    }
+                                            }
+                                        },
+                                        icon = {
+                                            Icon(
+                                                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                                contentDescription = item.title
+                                            )
+                                        },
+                                        label = {
+                                            Text(
+                                                item.title,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    )
                                 }
                             }
                         }
-                    ) { innerPadding ->
-                        NavHost(
-                            navController = navController,
-                            startDestination = "splash",
-                            modifier = Modifier.padding(innerPadding)
-                        ) {
-                            // Màn hình chờ 4 giây
-                            composable("splash") {
-                                SplashScreen(
-                                    onTimeout = {
-                                        navController.navigate("main") {
-                                            popUpTo("splash") { inclusive = true }
-                                        }
+                    }
+                ) { innerPadding ->
+                    NavHost(
+                        navController = navController,
+                        startDestination = "splash",
+                        modifier = Modifier.padding(innerPadding)
+                    ) {
+                        // Màn hình chờ 4 giây
+                        composable("splash") {
+                            SplashScreen(
+                                onTimeout = {
+                                    navController.navigate("main") {
+                                        popUpTo("splash") { inclusive = true }
                                     }
-                                )
-                            }
-                            composable("main") {
-                                MainScreen(viewModel = viewModel)
-                            }
-                            composable("thongke") {
-                                ThongKeScreen(viewModel = viewModel)
-                            }
-                            composable("danhmuc") {
-                                DanhMucScreen(viewModel = viewModel)
-                            }
-                            composable("about") {
-                                GioiThieuScreen(viewModel = viewModel)
-                            }
-                            composable("tintuc") {
-                                TintucScreen(viewModel = tintucViewModel)
-                            }
+                                }
+                            )
+                        }
+                        composable("main") {
+                            MainScreen(viewModel = viewModel)
+                        }
+                        composable("thongke") {
+                            ThongKeScreen(viewModel = viewModel)
+                        }
+                        composable("danhmuc") {
+                            DanhMucScreen(viewModel = viewModel)
+                        }
+                        composable("about") {
+                            GioiThieuScreen(viewModel = viewModel)
+                        }
+                        composable("tintuc") {
+                            TintucScreen(viewModel = tintucViewModel)
                         }
                     }
                 }
             }
         }
 
+    }
 
     override fun onStart() {
         super.onStart()
-        Log.d("BTL_Lifecycle", "1. App đang hiện lên (onStart)")
+        Log.d("BudgetBuddy_Lifecycle", "onStart: Activity bắt đầu hiển thị")
     }
 
     override fun onResume() {
         super.onResume()
-        Log.d("BTL_Lifecycle", "2. App đã sẵn sàng cho Hân tương tác (onResume)")
+        Log.d("BudgetBuddy_Lifecycle", "onResume: Activity sẵn sàng tương tác")
     }
 
     override fun onPause() {
         super.onPause()
-        Log.d("BTL_Lifecycle", "3. App đang bị che khuất hoặc tạm dừng (onPause)")
+        Log.d("BudgetBuddy_Lifecycle", "onPause: Activity tạm dừng")
+    }
+
+    override fun onStop() {
+        super.onStop()
+        Log.d("BudgetBuddy_Lifecycle", "onStop: Activity không còn hiển thị")
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d("BTL_Lifecycle", "4. App đã bị tắt hoàn toàn (onDestroy)")
+        Log.d("BudgetBuddy_Lifecycle", "onDestroy: Activity bị hủy")
     }
 }
-
-
 
 @Preview(showBackground = true)
 @Composable

@@ -50,7 +50,7 @@ fun ThongKeScreen(
         dm?.loai == -1
     }
 
-    val tongSoBanGhi = danhSachChiTieu.size
+    val tongSoBanGhi = danhSachChiTieu.size // Đếm số ban in trả về Int
     val tongChi = danhSachChiTieu.sumOf { it.soTien }
 
     val giaTriTB = if (tongSoBanGhi > 0) tongChi / tongSoBanGhi else 0.0

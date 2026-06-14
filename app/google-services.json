@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "692990732531",
+    "project_id": "nhom-5-quan-li-chi-tieu",
+    "storage_bucket": "nhom-5-quan-li-chi-tieu.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:692990732531:android:5d79d0bacbe4197905ef86",
+        "android_client_info": {
+          "package_name": "com.example.nhom_5_quan_li_chi_tieu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxksH-3QM1yuR7MHTgFuEWK0ZutpFnlSE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
